@@ -522,7 +522,7 @@ def scene_cta(lt):
     p = seg(lt, 1.25, 0.55)
     if p > 0:
         a = eo(p)
-        u = T("hydrastream.vercel.app", 64, TEXT, "m", 0)
+        u = T("hydra-addon.vercel.app", 64, TEXT, "m", 0)
         sc = min(1.0, 920 / u.width)
         put(img, u, W / 2, 1033, sc, a)
 
