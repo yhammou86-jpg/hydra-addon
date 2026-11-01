@@ -1,6 +1,6 @@
 {
   "name": "hydrastream",
-  "version": "2.2.3",
+  "version": "2.2.4",
   "private": true,
   "description": "Hydra — one Stremio/Nuvio addon, every source. TorBox debrid + native P2P. Zero dependencies.",
   "author": "Yassine Aka DesertBoy",

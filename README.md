@@ -1,8 +1,8 @@
 # Hydra
 
-**One addon. Every source.** A Stremio / Nuvio addon that aggregates public trackers and Torznab
-indexers, probes your debrid cache in a single batch call, and falls back to native P2P — so there
-is always something to press play on.
+**One addon. Every source.** A Stremio / Nuvio addon that aggregates public trackers, Stremio
+addons and Torznab indexers, probes your debrid cache in a single batch call, and falls back to
+native P2P — so there is always something to press play on.
 
 Runs entirely on Vercel's free tier. Zero runtime dependencies.
 
@@ -10,7 +10,7 @@ Runs entirely on Vercel's free tier. Zero runtime dependencies.
 Stremio  ──┐
            ├──►  Hydra  ──►  Cinemeta (title lookup)
 Nuvio    ──┘         │
-                     ├──►  15 sources in parallel, hard deadline
+                     ├──►  16 sources in parallel, hard deadline
                      ├──►  debrid checkcached  (1 request, N hashes)
                      └──►  ranked stream list
                               ├─ ⚡ cached  → /r/<hash>  → direct link
@@ -136,7 +136,7 @@ Everything below is set through `/configure` and encoded into the addon URL.
 | `langs` | Language filter, ISO codes, e.g. `["en"]`. Empty means any. |
 | `addons` | Extra addon manifest URLs — StremThru Torz, Sootio, Zilean, or any Stremio addon |
 | `proxy` | Fetch sources through a proxy. Prefix (`https://w.dev/?url=`) or template (`https://w.dev/f/{url}`). Fixes TLS-fingerprint blocks. |
-| `torznab` | `{ url, key }` — Jackett / Prowlarr / any Newznab feed |
+| `torznab` | `{ url, key }` — Jackett / Prowlarr / any Torznab endpoint |
 | `prowlarr` | `{ url, key }` — Prowlarr's aggregate JSON API |
 
 ### Environment variables
@@ -177,6 +177,7 @@ are scraped directly.
 | **Torrentio** | 1 | Addon. Aggregates dozens of indexers; ~150 rows for a well-known film. |
 | **Comet** | 1 | Addon. The largest catalogue of the bunch — 1,600+ rows for the same film. |
 | **TorrentsDB** | 1 | Addon. Curated releases, good 4K coverage. |
+| **StremThru Torz** | 1 | Addon. Crowdsourced P2P pool — needs no account and no indexers. |
 | **Knaben** | 1 | Meta-search over dozens of trackers, with *live* seeders. |
 | **YTS** | 1 | Movies, small high-quality encodes. IMDb-addressable. |
 | **EZTV** | 1 | Series, IMDb-addressable, so episode matching is exact. |
@@ -187,35 +188,23 @@ are scraped directly.
 | **AniTosho** | 2 | Anime mirrors. |
 | **RARBG** | 2 | Off by default — heavily rate limited. |
 | **TorrentGalaxy** | 3 | Direct HTML scrape. Every public mirror is currently dead or challenged, and listings carry no infohash so the top rows need a detail-page fetch. Off by default; Knaben already indexes TGX. |
-| **Torznab** | 3 | **Jackett, Prowlarr, or any Newznab feed.** One URL can unlock hundreds of indexers. |
+| **Torznab** | 3 | **Jackett, Prowlarr, or any Torznab endpoint.** One URL can unlock hundreds of indexers. |
 | **Prowlarr** | 3 | Prowlarr's aggregate JSON search endpoint. |
 
 ### Bring your own addon
 
-StremThru Torz, Sootio and Zilean are config-required: each hands you a personal manifest URL
-containing your own settings, and there is no usable anonymous instance to ship. Paste that URL
-into **Your own addons** in step 2 — one per line — and Hydra will query it like any other source.
+Sootio and Zilean are config-required: each hands you a personal manifest URL containing your own
+settings, and there is no usable anonymous instance to ship. Paste that URL into **Your own addons**
+in step 2 — one per line — and Hydra will query it like any other source.
 
 Hit **Check these URLs** before relying on one. A config-required addon answers `200` with an
 empty stream list when it is not configured, which is indistinguishable from "this film has no
 results". The check reads the manifest instead: an empty `types` array or
 `configurationRequired: true` means the URL is a stub, and it says so.
 
-StremThru Torz in particular cannot ever be a built-in toggle. Its own source requires both
-indexers *and* a debrid store before it will answer:
-
-```go
-func (ud UserData) HasRequiredValues() bool {
-	if !ud.UserDataIndexers.HasRequiredValues() { return false }
-	if !ud.UserDataStores.HasRequiredValues() { return false }
-	return true
-}
-```
-
-and the live instance enforces it — an indexer with no store returns
-`400 failed to get request context: stores[0].code: missing store`. It is a Torznab client
-plus a debrid bridge, and Hydra already has both halves natively (the `torznab`/`prowlarr`
-providers and the TorBox integration), so a toggle would be a slower duplicate.
+StremThru Torz is the exception, and it is built in. Its config accepts a `p2p` store with no
+token and an empty indexer list, because it serves from a crowdsourced pool rather than scraping
+indexers itself — so the toggle works with nothing configured. See `src/providers/stremthru.js`.
 
 Providers fail independently. If Cloudflare blocks three of them from your region, the rest
 still answer and the request still succeeds. Use **Test all sources** in step 2 to see exactly

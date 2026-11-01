@@ -19,7 +19,7 @@ const debrid = require('./debrid');
 const health = require('./health');
 const cache = require('./cache');
 
-const VERSION = '2.2.3';
+const VERSION = '2.2.4';
 const ADDON_ID = 'community.hydrastream';
 
 function baseUrl(headers) {
@@ -55,9 +55,9 @@ function buildManifest(cfg, base) {
     name: 'Hydra',
     description:
       `One addon, every source. ${modeLabel}. ` +
-      'Aggregates public trackers and Torznab indexers, checks your debrid cache in a single ' +
-      'batch call, and falls back to native P2P so there is always something to play. ' +
-      'Coded with love by Yassine Aka DesertBoy.',
+      'Aggregates public trackers, Stremio addons and Torznab indexers, checks your debrid ' +
+      'cache in a single batch call, and falls back to native P2P so there is always ' +
+      'something to play. Coded with love by Yassine Aka DesertBoy.',
     logo: `${base}/logo.svg`,
     background: `${base}/logo.svg`,
     resources: ['stream'],

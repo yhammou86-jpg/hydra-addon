@@ -4,9 +4,9 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Hydra — One addon. Every source.</title>
-<meta name="description" content="Hydra is a Stremio and Nuvio addon that aggregates public trackers and Torznab indexers, checks your debrid cache in one batch call, and falls back to native P2P. Free to self-host on Vercel." />
+<meta name="description" content="Hydra is a Stremio and Nuvio addon that aggregates public trackers, Stremio addons and Torznab indexers, checks your debrid cache in one batch call, and falls back to native P2P. Free to self-host on Vercel." />
 <meta property="og:title" content="Hydra — One addon. Every source." />
-<meta property="og:description" content="TorBox and Real-Debrid plus native P2P for Stremio and Nuvio. Zero dependencies, free to host." />
+<meta property="og:description" content="Public trackers, Stremio addons and Torznab indexers, plus TorBox and Real-Debrid and native P2P. Zero dependencies, free to host." />
 <meta property="og:image" content="/logo.svg" />
 <link rel="icon" href="/logo.svg" type="image/svg+xml" />
 <style>
@@ -194,9 +194,9 @@
     <div class="pill"><span class="pulse"></span>Works in <b>Stremio</b> and <b>Nuvio</b></div>
     <h1>One addon.<br /><em>Every source.</em></h1>
     <p class="lede">
-      Hydra searches public trackers and <strong>Torznab indexers</strong>, checks your debrid
-      cache in a single batch call, and falls back to <strong>native P2P</strong> — so there is
-      always something to press play on.
+      Hydra searches public trackers, <strong>Stremio addons</strong> and
+      <strong>Torznab indexers</strong>, checks your debrid cache in a single batch call, and
+      falls back to <strong>native P2P</strong> — so there is always something to press play on.
     </p>
     <div class="cta">
       <a class="btn btn-gold" href="/configure">
@@ -208,7 +208,7 @@
     <p class="sub-hint">About 40 seconds · no signup · self-host free on Vercel</p>
 
     <div class="stats">
-      <div class="stat"><b>10</b><span>Sources</span></div>
+      <div class="stat"><b>16</b><span>Sources</span></div>
       <div class="stat"><b>2</b><span>Debrid services</span></div>
       <div class="stat"><b>1</b><span>Cache probe</span></div>
       <div class="stat"><b>0</b><span>Dependencies</span></div>
@@ -281,7 +281,7 @@
       <div class="step">
         <div class="n">04 / RANK</div>
         <h3>Score and format</h3>
-        <p>Resolution, source, codec, seeders and cache state combine into one score. Duplicates merge across trackers.</p>
+        <p>Resolution, source, codec, seeders and cache state combine into one score. Duplicate releases merge.</p>
       </div>
     </div>
   </section>
@@ -329,12 +329,16 @@
   <section id="sources" class="reveal">
     <div class="head">
       <div class="eyebrow">Coverage</div>
-      <h2>Ten sources, tiered by reliability</h2>
-      <p>Public trackers are fragile by nature, so Hydra treats them as interchangeable and tells you which are alive. The top tier carries most of the weight; the third tier is where private trackers live.</p>
+      <h2>Sixteen sources, tiered by reliability</h2>
+      <p>Public trackers are fragile by nature, so Hydra treats them as interchangeable and tells you which are alive. Four aggregator addons and five trackers do most of the work; the last tier is whatever you bring yourself.</p>
     </div>
     <div class="tiers">
       <div class="tier">
         <div class="tier-label">Tier 1 — reliable from anywhere</div>
+        <span class="chip a">Torrentio</span>
+        <span class="chip a">Comet</span>
+        <span class="chip a">TorrentsDB</span>
+        <span class="chip a">StremThru Torz</span>
         <span class="chip a">Knaben · meta-search</span>
         <span class="chip a">YTS · movies</span>
         <span class="chip a">EZTV · series</span>
@@ -343,17 +347,22 @@
       </div>
       <div class="tier">
         <div class="tier-label">Tier 2 — depends on your network</div>
+        <span class="chip b">MediaFusion</span>
         <span class="chip b">The Pirate Bay</span>
         <span class="chip b">AniTosho</span>
         <span class="chip b">RARBG</span>
       </div>
       <div class="tier">
-        <div class="tier-label">Tier 3 — bring your own indexers</div>
+        <div class="tier-label">Tier 3 — bring your own indexers or addons</div>
+        <span class="chip c">TorrentGalaxy</span>
         <span class="chip c">Torznab · Jackett</span>
         <span class="chip c">Prowlarr</span>
-        <span class="chip c">Any Newznab feed</span>
       </div>
     </div>
+    <p class="sub-hint">
+      RARBG, TorrentGalaxy, Prowlarr and Torznab ship switched off — the first two are mostly
+      dead, the last two need your own indexer. MediaFusion is on but usually returns nothing.
+    </p>
   </section>
 
   <section id="modes" class="reveal">
