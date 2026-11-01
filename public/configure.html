@@ -750,6 +750,12 @@
     box.innerHTML = '';
     for (const [id, label, hint] of modes) {
       const needsKey = id === 'debrid' && !state.key;
+      // Hybrid without a key has no debrid half to be hybrid with, so it
+      // resolves to plain P2P. Say that rather than implying a real choice.
+      const text = !state.key && id === 'hybrid'
+        ? 'No debrid key set, so this behaves exactly like P2P.'
+        : hint;
+
       const b = document.createElement('button');
       b.className = 'chip' + (state.mode === id ? ' on' : '') + (needsKey ? ' off' : '');
       b.textContent = label;
@@ -766,7 +772,7 @@
         scheduleUpdate();
       });
       box.appendChild(b);
-      if (state.mode === id) $('modeHint').textContent = hint;
+      if (state.mode === id) $('modeHint').textContent = text;
     }
   }
 
