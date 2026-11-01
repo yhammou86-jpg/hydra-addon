@@ -10,6 +10,7 @@ const animetosho = require('./animetosho');
 const therarbg = require('./therarbg');
 const torrentgalaxy = require('./torrentgalaxy');
 const { PRESETS } = require('./addon');
+const stremthru = require('./stremthru');
 const prowlarr = require('./prowlarr');
 const torznab = require('./torznab');
 
@@ -22,6 +23,7 @@ const torznab = require('./torznab');
  */
 const ALL = [
   ...PRESETS,
+  stremthru,
   knaben,
   yts,
   eztv,

@@ -19,7 +19,7 @@ const debrid = require('./debrid');
 const health = require('./health');
 const cache = require('./cache');
 
-const VERSION = '2.0.0';
+const VERSION = '2.1.0';
 const ADDON_ID = 'community.hydrastream';
 
 function baseUrl(headers) {

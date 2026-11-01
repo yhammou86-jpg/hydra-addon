@@ -299,6 +299,21 @@
 
       <div class="field">
         <div class="field-label">
+          <span>StremThru Torz instance — optional</span>
+          <span class="links"><a href="https://github.com/MunifTanjim/stremthru" target="_blank" rel="noopener">What is this?</a></span>
+        </div>
+        <div class="input-wrap">
+          <input id="stUrl" type="text" placeholder="https://stremthru.elfhosted.com" />
+        </div>
+        <div class="hint">
+          Torz needs no account: it runs on a shared P2P pool, so the toggle above works out of
+          the box. Leave this blank to use the public instance, or point it at your own
+          StremThru deployment to keep the requests on your hardware.
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label">
           <span>Your own addons — StremThru Torz, Sootio, Zilean, or any Stremio addon</span>
         </div>
         <textarea id="addons" rows="3" spellcheck="false"
@@ -502,6 +517,7 @@
   const SOURCES = [
     { id: 'torrentio', name: 'Torrentio', meta: 'Addon · dozens of indexers', tier: 1 },
     { id: 'comet', name: 'Comet', meta: 'Addon · biggest catalogue', tier: 1 },
+    { id: 'stremthru', name: 'StremThru Torz', meta: 'Addon · crowdsourced · no setup', tier: 1 },
     { id: 'torrentsdb', name: 'TorrentsDB', meta: 'Addon · curated releases', tier: 1 },
     { id: 'knaben', name: 'Knaben', meta: 'Meta-search · 30+ trackers', tier: 1 },
     { id: 'yts', name: 'YTS', meta: 'Movies · small encodes', tier: 1 },
@@ -536,7 +552,7 @@
     style: 'rich',
     providers: { knaben: true, yts: true, eztv: true, bitsearch: true, nyaa: true, apibay: true,
                  animetosho: true, therarbg: false, torrentio: true, comet: true,
-                 torrentsdb: true, mediafusion: true, torrentgalaxy: false,
+                 stremthru: true, torrentsdb: true, mediafusion: true, torrentgalaxy: false,
                  prowlarr: false, torznab: false },
     res: ['4k', '1080p', '720p', '480p'],
     max: 40,
@@ -554,6 +570,7 @@
     proxy: '',
     prowlarr: { url: '', key: '' },
     torznab: { url: '', key: '' },
+    stremthruUrl: '',
     client: 'stremio',
     tab: 'direct',
     blob: null
@@ -781,7 +798,8 @@
       sort: state.sort,
       proxy: state.proxy,
       prowlarr: state.prowlarr,
-      torznab: state.torznab
+      torznab: state.torznab,
+      stremthruUrl: state.stremthruUrl
     };
   }
 
@@ -982,6 +1000,11 @@
       scheduleUpdate();
     });
 
+    $('stUrl').addEventListener('input', (e) => {
+      state.stremthruUrl = e.target.value.trim();
+      scheduleUpdate();
+    });
+
     $('proxy').addEventListener('input', (e) => {
       state.proxy = e.target.value.trim();
       scheduleUpdate();
@@ -1090,6 +1113,7 @@
       state.proxy = cfg.proxy || '';
       state.torznab = cfg.torznab || state.torznab;
       state.prowlarr = cfg.prowlarr || state.prowlarr;
+      state.stremthruUrl = cfg.stremthruUrl || '';
 
       $('max').value = state.max; $('maxVal').textContent = state.max;
       $('maxGB').value = state.maxGB;
@@ -1099,6 +1123,7 @@
       $('sort').value = state.sort;
       $('style').value = state.style;
       $('tzUrl').value = state.torznab.url || '';
+      $('stUrl').value = state.stremthruUrl || '';
       $('proxy').value = state.proxy || '';
       $('tgNoCam').classList.toggle('on', state.noCam);
       $('tgEff').classList.toggle('on', state.preferEfficient);

@@ -20,6 +20,7 @@ const PROVIDER_IDS = [
   'therarbg',
   'torrentio',
   'comet',
+  'stremthru',
   'torrentsdb',
   'mediafusion',
   'torrentgalaxy',
@@ -50,6 +51,9 @@ const DEFAULTS = {
     // the highest value-per-request sources in the list.
     torrentio: true,
     comet: true,
+    // Torz needs nothing configured: `p2p` store, no indexers, crowdsourced
+    // pool. It is the single highest-yield source we have, so it is on.
+    stremthru: true,
     torrentsdb: true,
     mediafusion: true,
     // TGX has no live mirror and hangs, so it is opt-in.
@@ -74,6 +78,9 @@ const DEFAULTS = {
   proxy: '',
   prowlarr: { url: '', key: '' },
   torznab: { url: '', key: '' },
+  // Empty means the public instance. Set it to keep Torz requests on your own
+  // StremThru deployment.
+  stremthruUrl: '',
 };
 
 function bool(v, dflt) {
@@ -117,6 +124,7 @@ function normalize(raw) {
     proxy: typeof src.proxy === 'string' ? src.proxy.trim().slice(0, 300) : '',
     prowlarr: { url: '', key: '' },
     torznab: { url: '', key: '' },
+    stremthruUrl: '',
   };
 
   // `solid` was the original SolidTorrents provider id. It became BitSearch, so
@@ -163,6 +171,15 @@ function normalize(raw) {
     cfg.torznab.key = String(src.torznab.key || '').slice(0, 200);
   }
   if (!cfg.torznab.url) cfg.providers.torznab = false;
+
+  // Optional: point Torz at a self-hosted instance. A bare host is accepted and
+  // upgraded to https, and a pasted manifest URL is stripped back to its root.
+  if (typeof src.stremthruUrl === 'string' && src.stremthruUrl.trim()) {
+    let u = src.stremthruUrl.trim();
+    if (!/^https?:\/\//i.test(u)) u = `https://${u}`;
+    u = u.replace(/\/manifest\.json$/i, '').replace(/\/+$/, '');
+    cfg.stremthruUrl = /^https?:\/\/[^\s/]+/i.test(u) ? u.slice(0, 300) : '';
+  }
 
   if (!cfg.key) {
     if (cfg.mode === 'debrid') cfg.mode = 'hybrid';

@@ -14,6 +14,8 @@ const { normalize } = require('../src/config');
 const { parseRelease, matchesEpisode, detectLanguages, parseSizeText } = require('../src/parse');
 const { scoreItem, passesFilters } = require('../src/rank');
 const { toRow } = require('../src/providers/addon');
+const stremthru = require('../src/providers/stremthru');
+const { ALL } = require('../src/providers');
 const { handleManifest, handleHealth, handleConfig } = require('../src/app');
 
 let passed = 0;
@@ -518,6 +520,43 @@ test('drops a stream that has no infohash', () => {
   assert.strictEqual(toRow({ name: 'junk', title: 'nothing useful' }, 'comet', 'Comet'), null);
 });
 
+/* ------------------------------------------------------------- stremthru */
+console.log('\nstremthru torz');
+
+test('builds the zero-config torz blob', () => {
+  // The whole point: no debrid account and no indexers. If either requirement
+  // creeps back in, this decodes to something that fails HasRequiredValues().
+  const decoded = JSON.parse(Buffer.from(stremthru.BLOB, 'base64').toString('utf8'));
+  assert.deepStrictEqual(decoded, { indexers: [], stores: [{ c: 'p2p' }] });
+});
+
+test('ships enabled by default', () => {
+  const cfg = normalize({});
+  assert.strictEqual(cfg.providers.stremthru, true, 'torz should be on out of the box');
+});
+
+test('appears in the provider registry and in health', () => {
+  assert.ok(ALL.some((p) => p.id === 'stremthru'), 'provider not registered');
+  const body = JSON.parse(handleHealth().body);
+  assert.ok(body.providers.some((p) => p.id === 'stremthru'), 'health must list it');
+});
+
+test('normalises a self-hosted instance url', () => {
+  assert.strictEqual(
+    normalize({ stremthruUrl: 'stremthru.mydomain.dev' }).stremthruUrl,
+    'https://stremthru.mydomain.dev'
+  );
+  assert.strictEqual(
+    normalize({ stremthruUrl: 'https://tz.example.com/manifest.json' }).stremthruUrl,
+    'https://tz.example.com'
+  );
+  assert.strictEqual(normalize({ stremthruUrl: '   ' }).stremthruUrl, '');
+});
+
+test('turns the provider off when deselected', () => {
+  assert.strictEqual(normalize({ providers: { stremthru: false } }).providers.stremthru, false);
+});
+
 /* ---------------------------------------------------------------- filters */
 console.log('\nfilters');
 
@@ -637,8 +676,21 @@ testAsync('returns real streams for a known movie', async () => {
   }
 });
 
-/* -------------------------------------------------------------- report */
-// Wait for the async (network) tests before judging the run, so the summary is
+testAsync('torz answers with nothing configured', async () => {
+  // The claim this feature rests on: `{indexers:[],stores:[{c:"p2p"}]}` is
+  // enough. If StremThru ever starts requiring a store or an indexer, this
+  // fails loudly instead of silently contributing zero rows forever.
+  const ctx = { kind: 'movie', imdbId: 'tt0816692', cfg: normalize({}) };
+  const rows = await stremthru.search(ctx);
+  assert.ok(rows.length > 0, 'expected rows from the public torz instance');
+  for (const r of rows) {
+    assert.match(r.infoHash, /^[a-f0-9]{40}$/, 'every row needs a real infohash');
+    assert.ok(r.provider === 'stremthru');
+  }
+  assert.ok(rows.some((r) => r.size > 0), 'sizes should come through from videoSize');
+});
+
+/* -------------------------------------------------------------- report */// Wait for the async (network) tests before judging the run, so the summary is
 // honest and the exit code reflects them.
 Promise.all(pending).then(() => {
   const total = passed + failures.length;
