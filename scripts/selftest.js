@@ -124,6 +124,13 @@ test('disables debrid-only mode without a key', () => {
   assert.strictEqual(cfg.mode, 'hybrid');
 });
 
+test('still honours an explicit p2p choice without a key', () => {
+  // The picker used to be switched off entirely when no key was present, which
+  // left the user unable to choose anything. P2P must survive untouched.
+  assert.strictEqual(normalize({ mode: 'p2p', key: '' }).mode, 'p2p');
+  assert.strictEqual(normalize({ mode: 'hybrid', key: '' }).mode, 'hybrid');
+});
+
 /* ---------------------------------------------------------------- parse */
 console.log('\nrelease parser');
 

@@ -210,6 +210,11 @@
   .toggle span.lbl{font-size:12.5px;color:var(--muted)}
   .toggle.on span.lbl{color:var(--text)}
   .dimmed{opacity:.4;pointer-events:none}
+  /* Dimmed but still interactive: for controls that stay meaningful, or whose
+     reason needs to be readable before they can be used. */
+  .muted{opacity:.55}
+  .chip.off{opacity:.38;cursor:not-allowed;border-style:dashed}
+  .chip.off:hover{border-color:var(--line);color:var(--muted)}
 
   .note{display:flex;gap:10px;padding:12px 14px;border-radius:11px;background:rgba(233,196,106,.06);
         border:1px solid rgba(233,196,106,.18);font-size:12.5px;color:#D9C89A;line-height:1.55;margin-top:14px}
@@ -736,12 +741,25 @@
       ['debrid', 'Debrid only', 'Only show what your service can serve right now.'],
       ['p2p', 'P2P only', 'Never contact the debrid service.']
     ];
+
+    // Only "Debrid only" genuinely cannot work without a key. Hybrid degrades
+    // to plain P2P and P2P never needed a key, so switching the whole block off
+    // (as it used to) left the user with no choice at all.
+    if (!state.key && state.mode === 'debrid') state.mode = 'hybrid';
+
     box.innerHTML = '';
     for (const [id, label, hint] of modes) {
+      const needsKey = id === 'debrid' && !state.key;
       const b = document.createElement('button');
-      b.className = 'chip' + (state.mode === id ? ' on' : '');
+      b.className = 'chip' + (state.mode === id ? ' on' : '') + (needsKey ? ' off' : '');
       b.textContent = label;
+      b.setAttribute('aria-disabled', needsKey ? 'true' : 'false');
       b.addEventListener('click', () => {
+        if (needsKey) {
+          $('modeHint').textContent =
+            'Paste a debrid API key above to filter by what your service already has.';
+          return;
+        }
         state.mode = id;
         renderModes();
         syncKeyBlock();
@@ -750,7 +768,6 @@
       box.appendChild(b);
       if (state.mode === id) $('modeHint').textContent = hint;
     }
-    $('modeBlock').classList.toggle('dimmed', !state.key);
   }
 
   function syncKeyBlock() {
@@ -759,9 +776,15 @@
     if (s.keys) $('keyLink').href = s.keys;
     if (s.signup) $('signLink').href = s.signup;
     $('apiKey').placeholder = 'Paste your ' + s.name + ' API key';
-    $('keyBlock').classList.toggle('dimmed', state.mode === 'p2p');
-    $('tgCached').classList.toggle('dimmed', !state.key || state.mode === 'p2p');
-    $('tgUncached').classList.toggle('dimmed', !state.key || state.mode === 'p2p');
+    // The key field stays editable in every mode. Disabling it under "P2P only"
+    // was a trap: you had to leave P2P to enter a key, but could not leave P2P
+    // without one.
+    $('keyBlock').classList.toggle('muted', state.mode === 'p2p');
+    const cacheInert = !state.key || state.mode === 'p2p';
+    $('tgCached').classList.toggle('dimmed', cacheInert);
+    $('tgUncached').classList.toggle('dimmed', cacheInert);
+    $('tgCached').title = cacheInert ? 'Needs a debrid key and a mode that uses it' : '';
+    $('tgUncached').title = cacheInert ? 'Needs a debrid key and a mode that uses it' : '';
   }
 
   function applyClient() {
@@ -971,6 +994,7 @@
   function wire() {
     $('apiKey').addEventListener('input', (e) => {
       state.key = e.target.value.trim();
+      renderModes();
       syncKeyBlock();
       scheduleUpdate();
     });
