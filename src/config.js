@@ -74,6 +74,8 @@ const DEFAULTS = {
   cachedOnly: false,
   uncached: false,
   preferEfficient: true,
+  // Collapse the same release re-uploaded under different infohashes.
+  dedupe: true,
   lang: '',
   proxy: '',
   prowlarr: { url: '', key: '' },
@@ -120,6 +122,7 @@ function normalize(raw) {
     cachedOnly: bool(src.cachedOnly, DEFAULTS.cachedOnly),
     uncached: bool(src.uncached, DEFAULTS.uncached),
     preferEfficient: bool(src.preferEfficient, DEFAULTS.preferEfficient),
+    dedupe: bool(src.dedupe, DEFAULTS.dedupe),
     lang: typeof src.lang === 'string' ? src.lang.slice(0, 12) : '',
     proxy: typeof src.proxy === 'string' ? src.proxy.trim().slice(0, 300) : '',
     prowlarr: { url: '', key: '' },

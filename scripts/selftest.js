@@ -16,6 +16,7 @@ const { scoreItem, passesFilters } = require('../src/rank');
 const { toRow } = require('../src/providers/addon');
 const stremthru = require('../src/providers/stremthru');
 const { ALL } = require('../src/providers');
+const { releaseSignature, collapseDuplicates } = require('../src/orchestrator');
 const { handleManifest, handleHealth, handleConfig } = require('../src/app');
 
 let passed = 0;
@@ -557,6 +558,54 @@ test('turns the provider off when deselected', () => {
   assert.strictEqual(normalize({ providers: { stremthru: false } }).providers.stremthru, false);
 });
 
+/* ---------------------------------------------------------- dedupe filter */
+console.log('\nduplicate releases');
+
+const mk = (title, size, seeders, providerName) => ({
+  infoHash: String(title).length.toString(16).padStart(40, 'a').slice(0, 40),
+  title,
+  size,
+  seeders,
+  providerName,
+});
+
+test('merges the same release under two infohashes', () => {
+  const a = mk('Interstellar.2014.2160p.BluRay.x265-PSA.mkv', 5.75e9, 10, 'Torrentio');
+  const b = { ...mk('Interstellar.2014.2160p.BluRay.x265-PSA', 5.75e9, 99, 'Comet'), infoHash: 'b'.repeat(40) };
+  const out = collapseDuplicates([a, b]);
+  assert.strictEqual(out.length, 1, 'the re-upload should collapse');
+  assert.strictEqual(out[0].seeders, 99, 'survivor should keep the better swarm');
+  assert.strictEqual(out[0].providerName, 'Torrentio, Comet', 'should credit both sources');
+});
+
+test('keeps two different encodes of the same film', () => {
+  const a = mk('Interstellar (2014) IMAX (1080p BluRay x265 10bit Tigole).mkv', 6.48e9, 5, 'Torrentio');
+  const b = { ...mk('Interstellar (2014) IMAX (1080p BluRay x265 HEVC 10bit AAC 5.1 Q22 Joy).mkv', 6.48e9, 5, 'Comet'), infoHash: 'c'.repeat(40) };
+  assert.strictEqual(collapseDuplicates([a, b]).length, 2, 'Tigole and Joy are different releases');
+});
+
+test('keeps releases of the same film at different sizes', () => {
+  const a = mk('Interstellar.2014.1080p.BluRay.x264-GRP.mkv', 12.1e9, 5, 'Torrentio');
+  const b = { ...mk('Interstellar.2014.1080p.BluRay.x264-GRP.mkv', 8.4e9, 5, 'Comet'), infoHash: 'd'.repeat(40) };
+  assert.strictEqual(collapseDuplicates([a, b]).length, 2, 'different sizes means different cuts');
+});
+
+test('never merges on a bare title', () => {
+  // A signature without a resolution is what produced "28x Interstellar".
+  assert.strictEqual(releaseSignature(mk('Interstellar', 5e9, 1, 'x')), '');
+  assert.strictEqual(releaseSignature(mk('Interstellar.2014.1080p.BluRay', 0, 1, 'x')), '');
+});
+
+test('leaves unsized rows untouched', () => {
+  const rows = [mk('Film.2020.1080p.BluRay-GRP', 0, 1, 'A'), mk('Film.2020.1080p.BluRay-GRP', 0, 1, 'B')];
+  assert.strictEqual(collapseDuplicates(rows).length, 2);
+});
+
+test('is on by default and can be switched off', () => {
+  assert.strictEqual(normalize({}).dedupe, true);
+  assert.strictEqual(normalize({ dedupe: false }).dedupe, false);
+});
+
 /* ---------------------------------------------------------------- filters */
 console.log('\nfilters');
 
@@ -681,7 +730,14 @@ testAsync('torz answers with nothing configured', async () => {
   // enough. If StremThru ever starts requiring a store or an indexer, this
   // fails loudly instead of silently contributing zero rows forever.
   const ctx = { kind: 'movie', imdbId: 'tt0816692', cfg: normalize({}) };
-  const rows = await stremthru.search(ctx);
+
+  // The public instance is a third-party service; one retry keeps a blip from
+  // reading as a broken feature.
+  let rows = [];
+  for (let attempt = 0; attempt < 2 && rows.length === 0; attempt += 1) {
+    rows = await stremthru.search(ctx);
+  }
+
   assert.ok(rows.length > 0, 'expected rows from the public torz instance');
   for (const r of rows) {
     assert.match(r.infoHash, /^[a-f0-9]{40}$/, 'every row needs a real infohash');

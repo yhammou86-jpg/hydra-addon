@@ -106,6 +106,23 @@
        color:var(--dim);transition:.15s}
   .eye:hover{color:var(--gold);background:rgba(233,196,106,.08)}
 
+  /* textareas were inheriting raw browser chrome, which broke the rhythm of the
+     form: different border, different font, and a visible resize grabber. */
+  textarea{width:100%;background:var(--sunken);border:1px solid var(--line2);border-radius:12px;
+           padding:13px 15px;color:var(--text);font-size:12.5px;font-family:var(--mono);line-height:1.75;
+           outline:none;transition:.16s;resize:vertical;min-height:92px;display:block}
+  textarea::placeholder{color:#4E4740;font-family:var(--font);font-size:13px}
+  textarea:focus{border-color:var(--gold-line);box-shadow:0 0 0 3px rgba(233,196,106,.1)}
+  textarea::-webkit-resizer{background:transparent}
+
+  /* Consecutive fields read as one group; a hairline keeps them from blurring
+     into each other without adding another card. */
+  .field + .field{margin-top:22px;padding-top:20px;border-top:1px solid rgba(255,255,255,.055)}
+  .field-label span:first-child{color:#C4B9AC;letter-spacing:.005em}
+  .card{box-shadow:inset 0 1px 0 rgba(255,255,255,.028)}
+  .src:hover{transform:translateY(-1px)}
+  :focus-visible{outline:2px solid rgba(233,196,106,.55);outline-offset:2px}
+
   .status{margin-top:10px;font-size:12.5px;padding:9px 12px;border-radius:9px;display:none;line-height:1.5}
   .status.show{display:block}
   .status.ok{background:rgba(95,208,138,.09);border:1px solid rgba(95,208,138,.28);color:#A7E8C0}
@@ -299,28 +316,10 @@
 
       <div class="field">
         <div class="field-label">
-          <span>StremThru Torz instance — optional</span>
-          <span class="links"><a href="https://github.com/MunifTanjim/stremthru" target="_blank" rel="noopener">What is this?</a></span>
-        </div>
-        <div class="input-wrap">
-          <input id="stUrl" type="text" placeholder="https://stremthru.elfhosted.com" />
-        </div>
-        <div class="hint">
-          Torz needs no account: it runs on a shared P2P pool, so the toggle above works out of
-          the box. Leave this blank to use the public instance, or point it at your own
-          StremThru deployment to keep the requests on your hardware.
-        </div>
-      </div>
-
-      <div class="field">
-        <div class="field-label">
-          <span>Your own addons — StremThru Torz, Sootio, Zilean, or any Stremio addon</span>
+          <span>Your own addons — Sootio, Zilean, or any Stremio addon</span>
         </div>
         <textarea id="addons" rows="3" spellcheck="false"
-          placeholder="https://stremthru.elfhosted.com/stremio/torz/your-config&#10;https://sootio.elfhosted.com/your-config"
-          style="width:100%;background:var(--sunken);border:1px solid var(--line2);border-radius:12px;
-                 padding:11px 13px;color:var(--text);font-family:var(--mono);font-size:12px;
-                 line-height:1.6;resize:vertical;outline:none"></textarea>
+          placeholder="https://sootio.elfhosted.com/your-config&#10;https://zilean.elfhosted.com/your-config"></textarea>
         <div class="hint">
           One manifest URL per line. These addons hand you a personal URL containing your
           own settings, so there is no usable anonymous instance to ship — pasting yours is
@@ -416,6 +415,9 @@
       <div class="row" style="margin-top:9px;gap:9px">
         <div class="toggle on" id="tgStrict"><span class="sw"></span><span class="lbl">Match the exact title &amp; year</span></div>
         <div class="toggle on" id="tgUnrel"><span class="sw"></span><span class="lbl">Hide unreleased</span></div>
+      </div>
+      <div class="row" style="margin-top:9px;gap:9px">
+        <div class="toggle on" id="tgDedupe"><span class="sw"></span><span class="lbl">Merge duplicate releases</span></div>
       </div>
       <div class="hint" style="margin-top:8px">
         Exact matching drops releases that are a different film — a remake, a sequel, or an
@@ -564,6 +566,7 @@
     strictMatch: true,
     hideUnreleased: true,
     preferEfficient: true,
+    dedupe: true,
     cachedOnly: false,
     uncached: false,
     sort: 'quality',
@@ -793,6 +796,7 @@
       strictMatch: state.strictMatch,
       hideUnreleased: state.hideUnreleased,
       preferEfficient: state.preferEfficient,
+      dedupe: state.dedupe,
       cachedOnly: state.cachedOnly,
       uncached: state.uncached,
       sort: state.sort,
@@ -1000,11 +1004,6 @@
       scheduleUpdate();
     });
 
-    $('stUrl').addEventListener('input', (e) => {
-      state.stremthruUrl = e.target.value.trim();
-      scheduleUpdate();
-    });
-
     $('proxy').addEventListener('input', (e) => {
       state.proxy = e.target.value.trim();
       scheduleUpdate();
@@ -1035,7 +1034,7 @@
     $('sort').addEventListener('change', (e) => { state.sort = e.target.value; scheduleUpdate(); });
     $('style').addEventListener('change', (e) => { state.style = e.target.value; scheduleUpdate(); });
 
-    const toggles = { tgNoCam: 'noCam', tgEff: 'preferEfficient', tgStrict: 'strictMatch', tgUnrel: 'hideUnreleased', tgCached: 'cachedOnly', tgUncached: 'uncached' };
+    const toggles = { tgNoCam: 'noCam', tgEff: 'preferEfficient', tgStrict: 'strictMatch', tgUnrel: 'hideUnreleased', tgDedupe: 'dedupe', tgCached: 'cachedOnly', tgUncached: 'uncached' };
     for (const [id, key] of Object.entries(toggles)) {
       const el = $(id);
       el.addEventListener('click', () => {
@@ -1107,12 +1106,15 @@
       state.strictMatch = cfg.strictMatch !== false;
       state.hideUnreleased = cfg.hideUnreleased !== false;
       state.preferEfficient = cfg.preferEfficient !== false;
+      state.dedupe = cfg.dedupe !== false;
       state.cachedOnly = !!cfg.cachedOnly;
       state.uncached = !!cfg.uncached;
       state.sort = cfg.sort || state.sort;
       state.proxy = cfg.proxy || '';
       state.torznab = cfg.torznab || state.torznab;
       state.prowlarr = cfg.prowlarr || state.prowlarr;
+      // No control for this any more, but keep it so a hand-edited URL that
+      // points Torz at a self-hosted instance survives a round-trip.
       state.stremthruUrl = cfg.stremthruUrl || '';
 
       $('max').value = state.max; $('maxVal').textContent = state.max;
@@ -1123,10 +1125,10 @@
       $('sort').value = state.sort;
       $('style').value = state.style;
       $('tzUrl').value = state.torznab.url || '';
-      $('stUrl').value = state.stremthruUrl || '';
       $('proxy').value = state.proxy || '';
       $('tgNoCam').classList.toggle('on', state.noCam);
       $('tgEff').classList.toggle('on', state.preferEfficient);
+      $('tgDedupe').classList.toggle('on', state.dedupe);
       $('tgStrict').classList.toggle('on', state.strictMatch);
       $('tgUnrel').classList.toggle('on', state.hideUnreleased);
       $('tgCached').classList.toggle('on', state.cachedOnly);

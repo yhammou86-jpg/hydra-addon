@@ -64,6 +64,70 @@ function normalizeOne(raw, ctx) {
   };
 }
 
+/* ---------------------------------------------------------- duplicate releases */
+
+const EXT_RE = /\.(mkv|mp4|avi|m4v|ts|torrent)$/i;
+const RES_TOKEN = /\b(2160p|1080p|720p|480p|360p|4k|uhd)\b/;
+
+/**
+ * Hash dedupe only catches the *same torrent*. The same *release* gets
+ * re-uploaded constantly, so the identical file turns up under several
+ * infohashes and fills the list with what looks like choice.
+ *
+ * A signature of normalised title + size in whole GB collapses those. Both
+ * halves are needed: a bare title groups unrelated encodes ("Interstellar"
+ * appears 28 times across qualities), and size alone groups unrelated films.
+ *
+ * Parenthesised text is deliberately preserved — "…(1080p BluRay x265 10bit
+ * Tigole)" and "…(1080p BluRay x265 HEVC 10bit AAC 5.1 Q22 Joy)" are different
+ * releases that happen to weigh the same, and stripping the brackets merged
+ * them.
+ */
+function releaseSignature(item) {
+  const title = String(item.title || '')
+    .toLowerCase()
+    .replace(EXT_RE, '')
+    .replace(/[._]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Without a resolution or a size there is nothing safe to compare, so the row
+  // is left alone rather than guessed at.
+  if (!title || !RES_TOKEN.test(title) || !item.size) return '';
+
+  return `${title}|${Math.round(item.size / 1e9)}`;
+}
+
+function collapseDuplicates(items) {
+  const seen = new Map();
+  const out = [];
+
+  for (const item of items) {
+    const sig = releaseSignature(item);
+    if (!sig) {
+      out.push(item);
+      continue;
+    }
+
+    const kept = seen.get(sig);
+    if (!kept) {
+      seen.set(sig, item);
+      out.push(item);
+      continue;
+    }
+
+    // Survivor keeps the better swarm count and inherits every source it was
+    // seen on, so the merged row still credits all of them.
+    if (item.seeders > kept.seeders) kept.seeders = item.seeders;
+    if (!kept.size && item.size) kept.size = item.size;
+    if (!kept.providerName.split(', ').includes(item.providerName)) {
+      kept.providerName += `, ${item.providerName}`;
+    }
+  }
+
+  return out;
+}
+
 function dedupe(items) {
   const map = new Map();
   for (const item of items) {
@@ -145,6 +209,7 @@ async function gather(cfg, meta, opts = {}) {
   }
 
   let items = dedupe(raw);
+  if (cfg.dedupe !== false) items = collapseDuplicates(items);
   items = items.filter((item) => passesFilters(item, cfg, meta));
 
   for (const item of items) item.score = scoreItem(item, cfg);
@@ -333,4 +398,4 @@ async function probeAll(cfg, opts = {}) {
   return [...merged.values()].sort((x, y) => y.count - x.count);
 }
 
-module.exports = { gather, probe, probeAll, DEFAULT_BUDGET_MS };
+module.exports = { gather, probe, probeAll, DEFAULT_BUDGET_MS, releaseSignature, collapseDuplicates };
