@@ -19,7 +19,7 @@ const debrid = require('./debrid');
 const health = require('./health');
 const cache = require('./cache');
 
-const VERSION = '2.2.2';
+const VERSION = '2.2.3';
 const ADDON_ID = 'community.hydrastream';
 
 function baseUrl(headers) {
@@ -92,7 +92,11 @@ async function handleStream(query, headers) {
   const meta = await resolveMeta(type, rawId);
 
   const { items, stats, unreleased } = await gather(cfg, meta, {
-    budget: cfg.providers.prowlarr || cfg.providers.torznab ? 8000 : 6500,
+    // Torz answers in 4.7-9.0s, well past the 6.5s default, and a cut-off
+    // provider contributes nothing at all rather than partial results. Give it
+    // room instead of silently dropping the source roughly one time in three.
+    budget:
+      cfg.providers.stremthru || cfg.providers.prowlarr || cfg.providers.torznab ? 8000 : 6500,
   });
 
   let working = items;

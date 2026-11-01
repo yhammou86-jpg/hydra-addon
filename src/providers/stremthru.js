@@ -26,9 +26,30 @@
  */
 
 const { json } = require('../http');
+const cache = require('../cache');
 const { toRow } = require('./addon');
 
-const DEFAULT_BASE = 'https://stremthru.elfhosted.com';
+/**
+ * Two independent public deployments, tried in order. Torz is by far the
+ * slowest source we have and its latency is erratic — measured 2.5-3.9s on the
+ * author's instance against 4.5-7.0s on the elfhosted mirror, with occasional
+ * 8s+ stalls on either. A provider that misses the gather deadline contributes
+ * nothing at all, so failover matters more here than anywhere else.
+ */
+const DEFAULT_BASE = 'https://stremthru.13377001.xyz';
+const MIRROR_BASE = 'https://stremthru.elfhosted.com';
+
+/**
+ * Torz is the slowest source we have, and its answer is stable for minutes, so
+ * results are memoised per title. A warm lambda answers repeats instantly, and
+ * concurrent identical lookups collapse into one upstream request.
+ *
+ * Rejections are never cached, so a timeout retries next time.
+ */
+const TTL_MS = 10 * 60 * 1000;
+
+/** Per-attempt budget. Two attempts must still fit inside the gather deadline. */
+const ATTEMPT_TIMEOUT = 3600;
 
 const BLOB = Buffer.from(
   JSON.stringify({ indexers: [], stores: [{ c: 'p2p' }] }),
@@ -37,10 +58,12 @@ const BLOB = Buffer.from(
 
 const RES_RE = /\b(2160p|1080p|720p|480p|4k|uhd)\b/i;
 
-function baseFrom(cfg) {
+function hostsFrom(cfg) {
   const raw = cfg && typeof cfg.stremthruUrl === 'string' ? cfg.stremthruUrl.trim() : '';
-  const base = raw || DEFAULT_BASE;
-  return base.replace(/\/manifest\.json$/i, '').replace(/\/+$/, '');
+  if (raw) {
+    return [raw.replace(/\/manifest\.json$/i, '').replace(/\/+$/, '')];
+  }
+  return [DEFAULT_BASE, MIRROR_BASE];
 }
 
 const stremthru = {
@@ -58,9 +81,22 @@ const stremthru = {
         ? `${ctx.imdbId}:${ctx.season}:${ctx.episode}`
         : ctx.imdbId;
 
-    const url = `${baseFrom(ctx.cfg)}/stremio/torz/${BLOB}/stream/${type}/${idPart}.json`;
-    const data = await json(url, { timeout: 6500 });
-    const streams = Array.isArray(data && data.streams) ? data.streams : [];
+    const hosts = hostsFrom(ctx.cfg);
+    const key = `torz:${hosts.join(',')}:${type}:${idPart}`;
+
+    const streams = await cache.memo(key, TTL_MS, async () => {
+      let lastErr = null;
+      for (const host of hosts) {
+        const url = `${host}/stremio/torz/${BLOB}/stream/${type}/${idPart}.json`;
+        try {
+          const data = await json(url, { timeout: ATTEMPT_TIMEOUT });
+          return Array.isArray(data && data.streams) ? data.streams : [];
+        } catch (err) {
+          lastErr = err;
+        }
+      }
+      throw lastErr || new Error('torz unreachable');
+    });
 
     const rows = [];
     for (const stream of streams) {
@@ -85,4 +121,5 @@ const stremthru = {
 
 module.exports = stremthru;
 module.exports.DEFAULT_BASE = DEFAULT_BASE;
+module.exports.MIRROR_BASE = MIRROR_BASE;
 module.exports.BLOB = BLOB;
