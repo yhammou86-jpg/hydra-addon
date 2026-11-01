@@ -12,6 +12,7 @@
     { "source": "/manifest.json", "destination": "/api/manifest" },
     { "source": "/:c/manifest.json", "destination": "/api/manifest?c=:c" },
     { "source": "/:c/stream/:type/:id", "destination": "/api/stream?c=:c&type=:type&id=:id" },
+    { "source": "/stream/:type/:id", "destination": "/api/stream?type=:type&id=:id" },
     { "source": "/r/:h", "destination": "/api/resolve?h=:h" },
     { "source": "/configure", "destination": "/configure.html" },
     { "source": "/health", "destination": "/api/health" }

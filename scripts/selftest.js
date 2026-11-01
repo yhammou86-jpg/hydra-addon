@@ -583,6 +583,45 @@ test('keeps only http(s) custom addon urls', () => {
   assert.deepStrictEqual(cfg.addons, ['https://a.dev/addon']);
 });
 
+/* -------------------------------------------------------------- routing */
+console.log('\nrouting');
+
+// Stremio will install the bare manifest.json even though it advertises
+// `configurable`, so every route the manifest promises has to resolve without
+// a config prefix. Keep the Vercel table and the dev server in agreement.
+const REWRITES = require('../vercel.json').rewrites;
+
+function rewriteFor(pathname) {
+  for (const r of REWRITES) {
+    const pattern = new RegExp(`^${r.source.replace(/:[a-z]+/gi, '[^/]+')}$`);
+    if (pattern.test(pathname)) return r.destination;
+  }
+  return null;
+}
+
+test('serves streams from an un-prefixed install', () => {
+  const dest = rewriteFor('/stream/movie/tt0816692.json');
+  assert.ok(dest, 'no rewrite matches /stream/movie/tt0816692.json');
+  assert.ok(!/c=:c/.test(dest), 'the bare route must not expect a config blob');
+  assert.ok(/type=:type/.test(dest) && /id=:id/.test(dest), 'type and id must be forwarded');
+});
+
+test('serves the un-prefixed manifest too', () => {
+  assert.strictEqual(rewriteFor('/manifest.json'), '/api/manifest');
+});
+
+test('still routes a configured install through its own blob', () => {
+  const dest = rewriteFor('/d1abc/stream/movie/tt0816692.json');
+  assert.ok(dest && /c=:c/.test(dest), 'configured installs must carry the blob');
+});
+
+test('falls back to defaults when no config is supplied', () => {
+  const cfg = normalize(decode(undefined));
+  assert.strictEqual(cfg.maxGB, 40);
+  assert.deepStrictEqual(cfg.langs, []);
+  assert.ok(Object.values(cfg.providers).some(Boolean), 'defaults must enable providers');
+});
+
 /* ---------------------------------------------------------------- live */
 console.log('\nlive scrape (network)');
 

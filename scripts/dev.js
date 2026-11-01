@@ -117,6 +117,16 @@ const server = http.createServer(async (req, res) => {
       );
     }
 
+    // Un-prefixed install: Stremio will happily install the bare manifest.json,
+    // so the matching stream route has to exist or every playback request 404s.
+    const bareStreamMatch = pathname.match(/^\/stream\/(movie|series)\/(.+?)(?:\.json)?$/);
+    if (bareStreamMatch) {
+      return emit(
+        res,
+        await handleStream({ type: bareStreamMatch[1], id: bareStreamMatch[2] }, headers)
+      );
+    }
+
     // Static assets
     const safe = path.normalize(path.join(PUBLIC, pathname)).replace(/^(\.\.[/\\])+/, '');
     if (safe.startsWith(PUBLIC) && fs.existsSync(safe) && fs.statSync(safe).isFile()) {
