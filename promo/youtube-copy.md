@@ -18,7 +18,7 @@ Hydra — a free, open-source addon for Stremio and Nuvio.
 One install link. Both apps. No account. No subscription.
 
 ▶ Install: https://hydrastream.vercel.app
-💻 Source: https://github.com/yhammou86-jpg/StreamMaster
+💻 Source: https://github.com/yhammou86-jpg/hydra-addon
 
 Works with TorBox and P2P — your key, your choice.
 10 sources, one query. Ranked, filtered, ready.
