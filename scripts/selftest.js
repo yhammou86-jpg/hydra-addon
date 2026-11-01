@@ -731,10 +731,12 @@ testAsync('torz answers with nothing configured', async () => {
   // fails loudly instead of silently contributing zero rows forever.
   const ctx = { kind: 'movie', imdbId: 'tt0816692', cfg: normalize({}) };
 
-  // The public instance is a third-party service; one retry keeps a blip from
-  // reading as a broken feature.
+  // The public instance is a third-party service, so a slow or dropped request
+  // is a network event, not a broken contract. Retry a couple of times: a real
+  // regression (Torz demanding a store again) comes back as a 4xx immediately
+  // and still fails here.
   let rows = [];
-  for (let attempt = 0; attempt < 2 && rows.length === 0; attempt += 1) {
+  for (let attempt = 0; attempt < 3 && rows.length === 0; attempt += 1) {
     rows = await stremthru.search(ctx);
   }
 
