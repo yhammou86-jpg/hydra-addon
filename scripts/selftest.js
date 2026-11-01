@@ -608,6 +608,18 @@ test('leaves unsized rows untouched', () => {
   assert.strictEqual(collapseDuplicates(rows).length, 2);
 });
 
+test('never repeats a source name when merging merged rows', () => {
+  // providerName becomes a comma-joined list after the first merge, so a later
+  // merge appended the whole string and produced
+  // "…, Comet, StremThru Torz, TPB, Comet, StremThru Torz".
+  const a = mk('Film.2020.1080p.BluRay-GRP.mkv', 5e9, 1, 'Torrentio, Comet, StremThru Torz');
+  const b = { ...mk('Film.2020.1080p.BluRay-GRP.mkv', 5e9, 1, 'TPB, Comet, StremThru Torz'), infoHash: 'e'.repeat(40) };
+  const out = collapseDuplicates([a, b]);
+  const names = out[0].providerName.split(', ');
+  assert.strictEqual(names.length, new Set(names).size, 'source names must be unique');
+  assert.deepStrictEqual(names, ['Torrentio', 'Comet', 'StremThru Torz', 'TPB'], 'first-seen order');
+});
+
 test('is on by default and can be switched off', () => {
   assert.strictEqual(normalize({}).dedupe, true);
   assert.strictEqual(normalize({ dedupe: false }).dedupe, false);

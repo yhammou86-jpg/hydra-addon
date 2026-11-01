@@ -120,12 +120,27 @@ function collapseDuplicates(items) {
     // seen on, so the merged row still credits all of them.
     if (item.seeders > kept.seeders) kept.seeders = item.seeders;
     if (!kept.size && item.size) kept.size = item.size;
-    if (!kept.providerName.split(', ').includes(item.providerName)) {
-      kept.providerName += `, ${item.providerName}`;
-    }
+    kept.providerName = mergeProviders(kept.providerName, item.providerName);
   }
 
   return out;
+}
+
+/**
+ * `providerName` is a comma-joined list once a row has been merged at least
+ * once. Appending it wholesale produced repeats — the whole string never
+ * matched a single entry in the split list, so "Comet, StremThru Torz" was
+ * added even though both were already there, yielding
+ * "…, Comet, StremThru Torz, TPB, Comet, StremThru Torz".
+ *
+ * Merge name by name instead, preserving first-seen order.
+ */
+function mergeProviders(existing, incoming) {
+  const names = `${existing || ''}, ${incoming || ''}`
+    .split(', ')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return [...new Set(names)].join(', ');
 }
 
 function dedupe(items) {
@@ -140,9 +155,7 @@ function dedupe(items) {
     if (item.seeders > existing.seeders) existing.seeders = item.seeders;
     if (!existing.size && item.size) existing.size = item.size;
     if (item.title.length > existing.title.length) existing.title = item.title;
-    if (!existing.providerName.split(', ').includes(item.providerName)) {
-      existing.providerName += `, ${item.providerName}`;
-    }
+    existing.providerName = mergeProviders(existing.providerName, item.providerName);
   }
   return [...map.values()];
 }
